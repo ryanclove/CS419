@@ -1,0 +1,155 @@
+#!/usr/bin/python3
+
+import sys
+import math
+
+
+def sdbm(str):
+    #unsigned int
+    max = (math.pow(2,64) - 1) + 1
+    hashValue = 0
+    #int c
+    for c in str:
+        i = ord(c)
+        hashValue = i + (hashValue << 6) + (hashValue << 16) - hashValue
+    hash = hashValue % max
+
+    return hash
+
+def lcg(seed):
+    #      multipliar a    increment c   byte
+    return (1103515245 * seed + 12345) % 256
+
+def padding(block):
+    num = 16 - len(block)
+    return block + ([num] * num)
+
+def byteShuffling(block, key):
+    #for (i=0; i < blocksize; i=i+1)
+    for i in range(len(block)):
+        #first = key[i] & 0xf (lower 4 bits of the keystream)
+        first = key[i] & 15
+        #second = (key[i] >> 4) & 0xf (top 4 bits of the keystream)
+        second = (key[i] >> 4) & 15
+        #swap(block[first], block[second]) (exchange the bytes)
+        block[first], block[second] = block[second], block[first]
+        
+
+def main():
+
+    if len(sys.argv) != 4:
+        print("Format should be sbencrypt password plaintext ciphertext")
+        sys.exit()
+    
+    password = sys.argv[1]
+    plaintextfile = sys.argv[2]
+    plaintext = open(plaintextfile, "rb")
+    ciphertextfile = sys.argv[3]
+    ciphertext = open(ciphertextfile, "wb")
+
+    seed = sdbm(password)
+    vector = []
+    keystream = []
+    
+    #make keystream vector of seed
+    for _ in range(16):
+        seed = lcg(seed)
+        keystream.append((seed))
+
+    first = True                
+    first = plaintext.read(16)
+
+    while first:
+        second = plaintext.read(16)
+        if not second:
+            if len(first) < 16:
+                vector = []
+                paddedarr = padding(list(first))
+                if first:
+                    for i in range(16):
+                        vector.append(keystream[i] ^ paddedarr[i])
+                    first = False
+                else:
+                    for i in range(16):
+                        vector.append(cipherBlock[i] ^ paddedarr[i])
+                        
+                keystream = []
+                for _ in range(16):
+                    seed = lcg(seed)
+                    keystream.append(seed)
+                
+                
+                byteShuffling(vector, keystream)
+                
+                cipherBlock = [vector[i] ^ keystream[i] for i in range(16)]
+                
+                for data in cipherBlock:
+                    # https://docs.python.org/3/library/stdtypes.html
+                    ciphertext.write(int.to_bytes(data, byteorder=sys.byteorder, length=1))
+                    
+            elif len(first) == 16:
+                vector = []
+                arr = list(first)
+                if first:
+                    for i in range(16):
+                        vector.append(keystream[i] ^ arr[i])
+                    first = False
+                else:
+                    for	i in range(16):
+                        vector.append(cipherBlock[i] ^ arr[i])
+                                                                      
+                keystream = []
+                for _ in range(16):
+                    seed = lcg(seed)
+                    keystream.append(seed)
+                                                            
+                byteShuffling(vector, keystream)
+                
+                cipherBlock = [vector[i] ^ keystream[i] for i in range(16)]
+                for data in cipherBlock:
+                    ciphertext.write(int.to_bytes(data, byteorder=sys.byteorder, length=1))
+                
+                vector = []
+                paddedarr = padding([])
+                for i in range(16):
+                    vector.append(cipherBlock[i] ^ paddedarr[i])
+                                                        
+                keystream = []
+                for _ in range(16):
+                    seed = lcg(seed)
+                    keystream.append(seed)
+                                                          
+                byteShuffling(vector, keystream)
+                
+                cipherBlock = [vector[i] ^ keystream[i] for i in range(16)]
+                for data in cipherBlock:
+                    ciphertext.write(int.to_bytes(data, byteorder=sys.byteorder, length=1))
+        else:
+            vector = []
+            arr = list(first)
+            if first:
+                for i in range(16):
+                    vector.append(keystream[i] ^ arr[i])
+                first = False
+            else:
+                for i in range(16):
+                    vector.append(cipherBlock[i] ^ arr[i])
+
+            keystream = []
+            for _ in range(16):
+                seed = lcg(seed)
+                keystream.append(seed)
+                                                       
+            byteShuffling(vector, keystream)
+            
+            cipherBlock = [vector[i] ^ keystream[i] for i in range(16)]
+            for data in cipherBlock:
+                ciphertext.write(int.to_bytes(data, byteorder=sys.byteorder, length=1))
+                
+        first = second
+    
+    plaintext.close()
+    ciphertext.close()
+    
+if __name__ == "__main__":
+    main()

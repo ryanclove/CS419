@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+
+import sys
+
+def main():
+
+    if len(sys.argv) != 4:
+        print("Format should be vencrypt keyfile plaintext ciphertext")
+        sys.exit()
+
+    keyfile = sys.argv[1] 
+    key = open(keyfile, "rb") 
+    plaintext = sys.argv[2]
+    pln = open(plaintext, "rb") 
+    ciphertext = sys.argv[3]
+    ciph = open(ciphertext, "wb")
+
+    plain = []
+    keyList = []
+
+    # handle keyfile
+    if key:
+        keyByte = key.read(1)
+        while keyByte:
+            keyList.append(keyByte)
+            keyByte = key.read(1)
+    else:
+        keyList = [0]
+
+    # handle plaintext file
+    plnByte = pln.read(1)
+    while plnByte:
+        plain.append(plnByte)
+        plnByte = pln.read(1)
+
+    # handle ciphertext file
+    i = 0
+    for byte in range(len(plain)):
+        if keyList != [] and len(keyList) == i:
+            i = 0
+                 
+                 # returns unicode https://www.geeksforgeeks.org/ord-function-python/
+        cipher = (ord(plain[byte]) + ord(keyList[i])) % 256
+        # https://docs.python.org/3/library/stdtypes.html
+        ciph.write(int.to_bytes(cipher, byteorder=sys.byteorder, length=1))
+        i += 1
+
+    key.close()
+    pln.close()
+    ciph.close()
+
+    
+if __name__ == '__main__':
+    main()

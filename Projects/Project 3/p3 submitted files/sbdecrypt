@@ -1,0 +1,121 @@
+#!/usr/bin/python3
+
+import sys
+import math
+
+def sdbm(str):
+    #unsigned int
+    max = (math.pow(2,64) - 1) + 1
+    hashValue = 0
+    #int c
+    for c in str:
+        i = ord(c)
+        hashValue = i + (hashValue << 6) + (hashValue << 16) - hashValue
+    hash = hashValue % max
+
+    return hash
+
+
+def lcg(seed):
+    #      multipliar a    increment c   byte
+    return (1103515245 * seed + 12345) % 256
+
+
+def padding(block):
+    last = block[-1]
+    for pad in block[-last:]:
+        if pad != last:
+            return block
+    return block[:-last]
+
+
+def byteShuffling(block, key):
+    #for (i=0; i < blocksize; i=i+1)
+    for i in range(len(block)):
+        #first = key[i] & 0xf (lower 4 bits of the keystream)
+        first = key[i] & 15 #hexidecmal to decimal is 15
+        #second = (key[i] >> 4) & 0xf (top 4 bits of the keystream)
+        second = (key[i] >> 4) & 15
+        #swap(block[first], block[second]) (exchange the bytes)
+        block[first], block[second] = block[second], block[first]
+        
+
+def main():
+
+    if len(sys.argv) != 4:
+        print("Format should be sbdecrypt password ciphertext plaintext")
+        sys.exit()
+
+    password = sys.argv[1]
+    ciphertextfile = sys.argv[2]
+    ciphertext = open(ciphertextfile, "rb")
+    plaintextfile = sys.argv[3]
+    plaintext = open(plaintextfile, "wb")
+
+    seed = sdbm(password)
+  
+    vector = []
+    for _ in range(16):
+        seed = lcg(seed)
+        vector.append(seed)
+
+    first = True
+    first = ciphertext.read(16)
+
+    while first:
+        second = ciphertext.read(16)
+        if not second:
+            byte16 = list(first)
+
+            keystream = []
+            for _ in range(16):
+                seed = lcg(seed)
+                keystream.append(seed)
+
+            ciphertext_block = [byte16[i] ^ keystream[i] for i in range(16)]
+            byteShuffling(ciphertext_block, keystream)
+            
+            plaintext_block = []
+            if first:
+                for i in range(16):
+                    plaintext_block.append(vector[i] ^ ciphertext_block[i])
+                first = False
+            else:
+                for i in range(16):
+                    plaintext_block.append(temp[i] ^ ciphertext_block[i])
+
+            temp = byte16
+            final = padding(plaintext_block)
+            for data in final:
+                # https://docs.python.org/3/library/stdtypes.html
+                plaintext.write(int.to_bytes(data, byteorder=sys.byteorder, length=1))
+        else:
+            byte16 = list(first)
+
+            keystream = []
+            for _ in range(16):
+                seed = lcg(seed)
+                keystream.append(seed)
+
+            ciphertext_block = [byte16[i] ^ keystream[i] for i in range(16)]
+            byteShuffling(ciphertext_block, keystream)
+
+            plaintext_block = []
+            if first:
+                for i in range(16):
+                    plaintext_block.append(vector[i] ^ ciphertext_block[i])
+                first = False
+            else:
+                for i in range(16):
+                    plaintext_block.append(temp[i] ^ ciphertext_block[i])
+        
+            temp = byte16
+            for data in plaintext_block:
+                plaintext.write(int.to_bytes(data, byteorder=sys.byteorder, length=1))
+        first = second
+
+    plaintext.close()
+    ciphertext.close()
+
+if __name__ == "__main__":
+    main()

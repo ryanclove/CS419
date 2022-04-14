@@ -1,0 +1,53 @@
+#!/usr/bin/python3
+
+import sys
+import math
+
+# static unsigned long
+    #sdbm(str)
+    #unsigned char *str;
+    #{
+        #unsigned long hash = 0;
+        #int c;
+
+        #while (c = *str++)
+            #hash = c + (hash << 6) + (hash << 16) - hash;
+
+        #return hash;
+    #}
+
+def sdbm(str):
+    #unsigned int
+    max = (math.pow(2,64) - 1) + 1
+    hashValue = 0
+    #int c
+    for c in str:
+        i = ord(c)
+        hashValue = i + (hashValue << 6) + (hashValue << 16) - hashValue
+    hash = hashValue % max
+
+    return hash
+
+def lcg(seed):
+    #      multipliar a    increment c   byte
+    return (1103515245 * seed + 12345) % 256       
+
+def main():
+
+    password = sys.argv[1]
+    seed = sdbm(password)
+    plaintextfile = sys.argv[2]
+    plainfile = open(plaintextfile, "rb")
+    ciphertextfile = sys.argv[3]
+    scrypted = open(ciphertextfile, "wb")
+
+    byte = plainfile.read(1)
+    while byte:
+        seed = lcg(seed)
+        output = seed ^ ord(byte)
+        # https://docs.python.org/3/library/stdtypes.html
+        scrypted.write(int.to_bytes(output, byteorder=sys.byteorder, length=1))
+        byte = plainfile.read(1)
+
+if __name__ == "__main__":
+    main()
