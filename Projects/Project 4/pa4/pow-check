@@ -1,0 +1,133 @@
+#!/usr/bin/python3
+
+import sys
+import hashlib
+import time
+from itertools import permutations
+
+
+def hex(val):
+
+    if (val == '0'):
+        return 4
+
+    elif val == '1':
+        return 3
+
+    elif val == '2':
+        return 2
+
+    elif val == '3':
+        return 2
+
+    elif val == '4':
+        return 1
+
+    elif val == '5':
+        return 1
+
+    elif val == '6':
+        return 1
+
+    elif val == '7':
+        return 1
+
+    else:
+        return 0
+
+
+def getLeadingBits(hash):
+    ind = 0
+    zeros = 0
+
+    while hash[ind] == '0':
+        zeroCount += 1
+        ind += 1
+
+    b = hex(hash[ind])
+
+    return (zeroCount * 4) + b
+
+
+def main():
+    if len(sys.argv) != 3:
+        print("ERROR: Format should be pow-check.py powheader file")
+        sys.exit(1)
+
+    powheader = sys.argv[1]
+    file = sys.argv[2]
+
+    header = open(powheader, 'r')
+    if not header:
+        print("ERROR: Unable to open file")
+        return
+    
+    contents = header.read().splitlines()
+    if not contents:
+        print("ERROR: No contents in the file")
+        return
+    
+    for item in contents:
+        if item == '':
+            contents.remove('')
+
+    try:
+        initialHeader = contents[1][14:]
+    except:
+        initialHeader = ""
+
+    try:
+        proofOfWork = contents[2][15:]
+    except:
+        proofOfWork = ""
+
+    try:
+        headerBits = int(contents[4][14:])
+    except:
+        headerBits = 0
+
+    try:
+        hashHeader = contents[3][6:]
+    except:
+        hashHeader = ""
+
+
+    file_cont = open(file, 'rb')
+    if not file_cont:
+        print("ERROR: Can not open file")
+        return
+    file_content = file_cont.read()
+    initial = hashlib.sha256(file_content).hexdigest()
+
+    if initial == initialHeader:
+        print('PASSED : initial file hashes match')
+    else:
+        print('FAILED : missing Initial-hash in header or incorrect. \n Expected: {initial} + \n Header hash:  {initialHeader} ')
+
+    if proofOfWork == "":
+        print("ERROR : Proof-of-work is missing")
+        return
+
+    newStr = proofOfWork + initial
+    hash = hashlib.sha256(newStr.encode()).hexdigest()
+
+    if hash == hashHeader:
+        print('PASSED : pow hash matches Hash header')
+    else:
+        print('FAILED : pow hash does not match Hash header \n Expected: {hash} + \n Header has:  {hashHeader}')
+
+
+    leadingBits = getLeadingBits(hash)
+    if leadingBits == headerBits:
+        print('PASSED : leading bits is correct')
+    else:
+        print('FAILED : incorrect Leading-bits - value: {leadingBits}, expected: {headerBits} ')
+        print(f'leading bits is correct : {leadingBits}')
+    
+    header.close()
+    file_cont.close()
+
+
+
+if __name__ == "__main__":
+    main()
